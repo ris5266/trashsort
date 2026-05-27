@@ -56,6 +56,7 @@ CLASS_TO_BIN = {
     "glass": "altglas",
     "metal": "gelbe_tonne",
     "plastic": "gelbe_tonne",
+    "organic": "biomuell",
     "trash": "restmuell",
 }
 

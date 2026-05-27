@@ -7,8 +7,8 @@ DATA_DIR = os.path.join(ROOT, "data")
 TRASHNET_DIR = os.path.join(DATA_DIR, "trashnet")
 CHECKPOINT_DIR = os.path.join(ROOT, "checkpoints")
 
-# the 6 trashnet classes
-CLASSES = ["cardboard", "glass", "metal", "paper", "plastic", "trash"]
+# trashnet classes + organic
+CLASSES = ["cardboard", "glass", "metal", "organic", "paper", "plastic", "trash"]
 
 # imagenet mean/std
 MEAN = (0.485, 0.456, 0.406)
