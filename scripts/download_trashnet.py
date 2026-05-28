@@ -9,7 +9,6 @@ from huggingface_hub import hf_hub_download
 from trashsort import config
 
 def main():
-    print("downloading dataset-resized.zip ...")
     zip_path = hf_hub_download(repo_id="garythung/trashnet", filename="dataset-resized.zip", repo_type="dataset")
 
     os.makedirs(config.TRASHNET_DIR, exist_ok=True)
