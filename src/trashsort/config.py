@@ -28,4 +28,7 @@ SEED = 42
 USE_LIGHTING_NORM = True
 FREEZE_EPOCHS = 3
 
+# below this confidence the classifier says "unsure" instead of guessing
+CONF_THRESH = 0.60
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
