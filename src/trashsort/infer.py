@@ -7,9 +7,31 @@ import torch.nn.functional as F
 
 from . import config
 from .augmentation import eval_transform
-from .bins import get_bin
+from .bins import get_bin, coco_bin
 from .model import build_model
 from .preprocessing import normalize_lighting
+
+
+class ObjectRecognizer:
+    def __init__(self, model="yolov8s-seg.pt", conf=0.65):
+        from ultralytics import YOLO
+        self.model = YOLO(model)
+        self.conf = conf
+
+    def best(self, img):
+        r = self.model.predict(img, conf=0.25, verbose=False)[0]
+        best = None
+        for b in r.boxes:
+            c = float(b.conf)
+            if c < self.conf:
+                continue
+            name = self.model.names[int(b.cls)]
+            info = coco_bin(name)
+            if info is None:
+                continue
+            if best is None or c > best[1]:
+                best = (name, c, info)
+        return best
 
 
 class Classifier:
@@ -37,53 +59,69 @@ class Classifier:
         return cls, conf.item(), get_bin(cls)
 
 
-def draw(frame, cls, conf, bin_info):
+def draw(frame, cls, conf, bin_info, bbox=None):
     w = frame.shape[1]
+    color = bin_info["color"]
     cv2.rectangle(frame, (0, 0), (w, 86), (0, 0, 0), -1)
-    cv2.rectangle(frame, (0, 0), (w, 86), bin_info["color"], 3)
-    cv2.putText(frame, "%s (%d%%)" % (cls, conf * 100), (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-    cv2.putText(frame, "-> " + bin_info["name"], (12, 64), cv2.FONT_HERSHEY_SIMPLEX, 0.7, bin_info["color"], 2)
+    cv2.rectangle(frame, (0, 0), (w, 86), color, 3)
+    cv2.putText(frame, "%s (%d%%)" % (bin_info["name"], conf * 100), (12, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+    cv2.putText(frame, "(erkannt: %s)" % cls, (12, 66), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+    if bbox is not None:
+        x, y, bw, bh = bbox
+        cv2.rectangle(frame, (x, y), (x + bw, y + bh), color, 3)
     return frame
 
 
-def run_image(path, clf):
+# the full pipeline:
+#   1. framer cuts out the main object
+#   2. object recognizer tries to name it (e.g. electronics, fruit, bottles...)
+#   3. if it cant, the material classifier judges by material
+def classify(clf, frame, framer=None, recognizer=None):
+    bbox = None
+    target = frame
+    if framer is not None:
+        bbox = framer.best_bbox(frame)
+        if bbox is not None:
+            target = framer.crop(frame, bbox)
+
+    # specific object recognition
+    if recognizer is not None:
+        hit = recognizer.best(target)
+        if hit is not None:
+            name, conf, bin_info = hit
+            return name, conf, bin_info, bbox
+
+    # material classifier fallback
+    cls, conf, bin_info = clf.predict(target)
+    return cls, conf, bin_info, bbox
+
+
+def run_image(path, clf, framer=None, recognizer=None):
     img = cv2.imread(path)
-    cls, conf, bin_info = clf.predict(img)
-    print("%s -> %s (%.1f%%) -> %s [%s]" % (os.path.basename(path), cls, conf * 100, bin_info["name"], bin_info["law"]))
+    cls, conf, bin_info, bbox = classify(clf, img, framer, recognizer)
+    print("%s -> %s (%.1f%%) [%s]  (erkannt: %s)" % (os.path.basename(path), bin_info["name"], conf * 100, bin_info["law"], cls))
     out = path.rsplit(".", 1)[0] + "_pred.jpg"
-    cv2.imwrite(out, draw(img, cls, conf, bin_info))
+    cv2.imwrite(out, draw(img, cls, conf, bin_info, bbox))
     print("saved", out)
-
-
-def run_webcam(clf, cam=0):
-    cap = cv2.VideoCapture(cam)
-    print("press q to quit")
-    while True:
-        ok, frame = cap.read()
-        if not ok:
-            break
-        cls, conf, bin_info = clf.predict(frame)
-        cv2.imshow("trashsort", draw(frame, cls, conf, bin_info))
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-    cap.release()
-    cv2.destroyAllWindows()
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--image")
-    ap.add_argument("--webcam", action="store_true")
-    ap.add_argument("--cam", type=int, default=0)
+    ap.add_argument("--image", required=True)
+    ap.add_argument("--no-frame", action="store_true", help="dont auto-frame the object, classify the whole image")
+    ap.add_argument("--no-detect", action="store_true", help="skip object recognition, only use the material classifier")
     args = ap.parse_args()
 
     clf = Classifier()
-    if args.image:
-        run_image(args.image, clf)
-    elif args.webcam:
-        run_webcam(clf, args.cam)
-    else:
-        print("use --image PATH or --webcam")
+    framer = None
+    if not args.no_frame:
+        from .frame import ObjectFramer
+        framer = ObjectFramer()
+    recognizer = None
+    if not args.no_detect:
+        recognizer = ObjectRecognizer()
+
+    run_image(args.image, clf, framer, recognizer)
 
 
 if __name__ == "__main__":
