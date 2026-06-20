@@ -80,8 +80,6 @@ COCO_TO_BIN = {
     "donut": "biomuell", "cake": "biomuell",
     # paper -> Papier
     "book": "papier",
-    # packaging -> Gelbe Tonne
-    "bottle": "gelbe_tonne",
     # drinking glasses / ceramics / cutlery etc -> Restmuell
     "wine glass": "restmuell", "cup": "restmuell", "bowl": "restmuell", "fork": "restmuell",
     "knife": "restmuell", "spoon": "restmuell", "scissors": "restmuell", "vase": "restmuell",

@@ -65,7 +65,7 @@ def main():
     scaler = torch.amp.GradScaler("cuda", enabled=config.DEVICE.type == "cuda")
 
     os.makedirs(config.CHECKPOINT_DIR, exist_ok=True)
-    ckpt_path = os.path.join(config.CHECKPOINT_DIR, "classifier_best.pt")
+    ckpt_path = os.path.join(config.CHECKPOINT_DIR, "model.pt")
     best_acc = 0.0
     frozen = None
 

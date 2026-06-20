@@ -33,11 +33,20 @@ class ObjectRecognizer:
                 best = (name, c, info)
         return best
 
+    def detections(self, img, conf=0.3):
+        r = self.model.predict(img, conf=conf, verbose=False)[0]
+        out = []
+        for b in r.boxes:
+            x1, y1, x2, y2 = b.xyxy[0].tolist()
+            out.append((self.model.names[int(b.cls)], float(b.conf),
+                        (int(x1), int(y1), int(x2 - x1), int(y2 - y1))))
+        return out
+
 
 class Classifier:
     def __init__(self, ckpt_path=None):
         if ckpt_path is None:
-            ckpt_path = os.path.join(config.CHECKPOINT_DIR, "classifier_best.pt")
+            ckpt_path = os.path.join(config.CHECKPOINT_DIR, "model.pt")
         # load the model
         ckpt = torch.load(ckpt_path, map_location=config.DEVICE, weights_only=False)
         self.classes = ckpt["classes"]
@@ -57,19 +66,6 @@ class Classifier:
         conf, idx = probs.max(0)
         cls = self.classes[idx.item()]
         return cls, conf.item(), get_bin(cls)
-
-
-def draw(frame, cls, conf, bin_info, bbox=None):
-    w = frame.shape[1]
-    color = bin_info["color"]
-    cv2.rectangle(frame, (0, 0), (w, 86), (0, 0, 0), -1)
-    cv2.rectangle(frame, (0, 0), (w, 86), color, 3)
-    cv2.putText(frame, "%s (%d%%)" % (bin_info["name"], conf * 100), (12, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-    cv2.putText(frame, "(erkannt: %s)" % cls, (12, 66), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
-    if bbox is not None:
-        x, y, bw, bh = bbox
-        cv2.rectangle(frame, (x, y), (x + bw, y + bh), color, 3)
-    return frame
 
 
 # the full pipeline:
@@ -98,11 +94,8 @@ def classify(clf, frame, framer=None, recognizer=None):
 
 def run_image(path, clf, framer=None, recognizer=None):
     img = cv2.imread(path)
-    cls, conf, bin_info, bbox = classify(clf, img, framer, recognizer)
+    cls, conf, bin_info, _ = classify(clf, img, framer, recognizer)
     print("%s -> %s (%.1f%%) [%s]  (erkannt: %s)" % (os.path.basename(path), bin_info["name"], conf * 100, bin_info["law"], cls))
-    out = path.rsplit(".", 1)[0] + "_pred.jpg"
-    cv2.imwrite(out, draw(img, cls, conf, bin_info, bbox))
-    print("saved", out)
 
 
 def main():

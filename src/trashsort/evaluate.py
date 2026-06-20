@@ -15,7 +15,7 @@ from .model import build_model
 
 
 def main():
-    ckpt_path = os.path.join(config.CHECKPOINT_DIR, "classifier_best.pt")
+    ckpt_path = os.path.join(config.CHECKPOINT_DIR, "model.pt")
     split_path = os.path.join(config.CHECKPOINT_DIR, "test_split.json")
     if not os.path.exists(ckpt_path):
         print("no model found, train first")
