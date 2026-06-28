@@ -22,7 +22,7 @@
 
 🔍 **Two-stage recognition**: an object detector names things it knows (e.g. banana → Biomüll), a material classifier handles everything else (glass, plastic, paper, cardboard, metal, organic, trash)
 
-🧠 **Train your own model**: using the provided datasets, or use my trained one from HuggingFace
+🧠 **Train your own model**: using the provided datasets
 
 🖥️ **All in a Gradio app**: upload an image, pick a mode and see what bin the object belongs to
 
@@ -31,6 +31,16 @@
   ![Sorting items into the right German bins](demo.gif)
 
 </div>
+
+## Confusion matrix
+
+<div align="center">
+
+  <img src="confusion_matrix.png" alt="confusion matrix on the held-out test set" width="520px"/>
+</div>
+
+The material classifier was tested on **737 new images** that the model never saw during training, drawn from **TrashNet**, the **real fruit & veg** photos and **Freiburg Groceries** packaging. It reaches **94.8% accuracy** across the 7 material classes, with `organic` (99%) and `cardboard` (96%) the strongest.
+
 
 ## Install
 
@@ -54,7 +64,6 @@ python scripts/download_groceries.py    # supermarket dataset
 python scripts/add_groceries.py         # map packaging -> material classes
 python -m trashsort.train
 ```
-or just download my trained model from HuggingFace and put it in `trashsort/models`:
 
 4. **Launch the app**
 ```
