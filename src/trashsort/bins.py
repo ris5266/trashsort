@@ -47,6 +47,12 @@ BINS = {
         "color": (180, 0, 180),
         "law": "ElektroG",
     },
+    "altkleider": {
+        "name": "Altkleider",
+        "color_name": "-",
+        "color": (200, 200, 200),
+        "law": "KrWG",
+    },
 }
 
 # which bin each trashnet class belongs to
