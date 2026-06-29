@@ -5,6 +5,7 @@ import torch
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(ROOT, "data")
 TRASHNET_DIR = os.path.join(DATA_DIR, "trashnet")
+EVAL_DIR = os.path.join(DATA_DIR, "eval")
 CHECKPOINT_DIR = os.path.join(ROOT, "checkpoints")
 
 # trashnet classes + organic
