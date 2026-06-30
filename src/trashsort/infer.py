@@ -70,8 +70,8 @@ class Classifier:
 
 # the full pipeline:
 #   1. framer cuts out the main object
-#   2. object recognizer tries to name it (e.g. electronics, fruit, bottles...)
-#   3. if it cant, the material classifier judges by material
+#   2. clip recognizer tries to name the actual item and its bin
+#   3. if its unsure, the material classifier judges by material
 def classify(clf, frame, framer=None, recognizer=None):
     bbox = None
     target = frame
@@ -80,14 +80,13 @@ def classify(clf, frame, framer=None, recognizer=None):
         if bbox is not None:
             target = framer.crop(frame, bbox)
 
-    # specific object recognition
+    # open-vocabulary item recognition
     if recognizer is not None:
-        hit = recognizer.best(target)
-        if hit is not None:
-            name, conf, bin_info = hit
-            return name, conf, bin_info, bbox
+        res = recognizer.recognize(target)
+        if res["ok"]:
+            return res["item"], res["conf"], res["bin"], bbox
 
-    # material classifier fallback
+    # material classifier fallback (clip was unsure)
     cls, conf, bin_info = clf.predict(target)
     return cls, conf, bin_info, bbox
 
@@ -112,7 +111,8 @@ def main():
         framer = ObjectFramer()
     recognizer = None
     if not args.no_detect:
-        recognizer = ObjectRecognizer()
+        from .clip_recognizer import ClipRecognizer
+        recognizer = ClipRecognizer()
 
     run_image(args.image, clf, framer, recognizer)
 

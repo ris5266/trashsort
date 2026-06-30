@@ -5,6 +5,7 @@ numpy>=1.26
 Pillow>=10.0
 albumentations>=1.4
 ultralytics>=8.2
+open_clip_torch>=2.24
 datasets>=2.19
 scikit-learn>=1.4
 matplotlib>=3.8

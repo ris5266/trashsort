@@ -5,7 +5,8 @@ import cv2
 
 from . import config
 from .bins import BINS
-from .infer import Classifier, ObjectRecognizer
+from .infer import Classifier
+from .clip_recognizer import ClipRecognizer
 from .frame import ObjectFramer
 
 # reverse map: bin display name -> bin key
@@ -25,7 +26,7 @@ def main():
     rows = load_labels()
     clf = Classifier()
     framer = ObjectFramer()
-    recognizer = ObjectRecognizer()
+    recognizer = ClipRecognizer()
 
     total = 0
     correct = 0
@@ -48,9 +49,9 @@ def main():
             framed += 1
             target = framer.crop(img, bbox)
 
-        hit = recognizer.best(target)
-        if hit is not None:
-            name, conf, bin_info = hit
+        res = recognizer.recognize(target)
+        if res["ok"]:
+            name, conf, bin_info = res["item"], res["conf"], res["bin"]
             which = "recognizer"
         else:
             name, conf, bin_info = clf.predict(target)
