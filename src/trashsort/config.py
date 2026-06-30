@@ -35,7 +35,7 @@ CONF_THRESH = 0.60
 # clip recognizer
 CLIP_ARCH = "ViT-L-14"
 CLIP_PRETRAINED = "openai"
-CLIP_THRESH = 0.30   # top prob must beat this or we say unsure
-CLIP_MARGIN = 0.05   # top1 must beat top2 by this much
+CLIP_THRESH = 0.28   # top prob must beat this or we say unsure (tuned on data/eval)
+CLIP_MARGIN = 0.07   # top1 must beat top2 by this much (tuned on data/eval)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
