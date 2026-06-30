@@ -7,40 +7,10 @@ import torch.nn.functional as F
 
 from . import config
 from .augmentation import eval_transform
-from .bins import get_bin, coco_bin
+from .bins import get_bin, BINS
+from .items import CONDITIONS
 from .model import build_model
 from .preprocessing import normalize_lighting
-
-
-class ObjectRecognizer:
-    def __init__(self, model="yolov8s-seg.pt", conf=0.65):
-        from ultralytics import YOLO
-        self.model = YOLO(model)
-        self.conf = conf
-
-    def best(self, img):
-        r = self.model.predict(img, conf=0.25, verbose=False)[0]
-        best = None
-        for b in r.boxes:
-            c = float(b.conf)
-            if c < self.conf:
-                continue
-            name = self.model.names[int(b.cls)]
-            info = coco_bin(name)
-            if info is None:
-                continue
-            if best is None or c > best[1]:
-                best = (name, c, info)
-        return best
-
-    def detections(self, img, conf=0.3):
-        r = self.model.predict(img, conf=conf, verbose=False)[0]
-        out = []
-        for b in r.boxes:
-            x1, y1, x2, y2 = b.xyxy[0].tolist()
-            out.append((self.model.names[int(b.cls)], float(b.conf),
-                        (int(x1), int(y1), int(x2 - x1), int(y2 - y1))))
-        return out
 
 
 class Classifier:
@@ -68,33 +38,70 @@ class Classifier:
         return cls, conf.item(), get_bin(cls)
 
 
-# the full pipeline:
-#   1. framer cuts out the main object
-#   2. clip recognizer tries to name the actual item and its bin
-#   3. if its unsure, the material classifier judges by material
-def classify(clf, frame, framer=None, recognizer=None):
+# build the pfand/greasy/residue follow-up for an item, if it has one
+def make_question(cond, default_bin):
+    if not cond or cond not in CONDITIONS:
+        return None
+    c = CONDITIONS[cond]
+    return {"text": c["q"], "yes_bin": BINS[c["yes"]], "no_bin": default_bin}
+
+
+# the full pipeline, returns one structured result:
+#   1. framer cuts out the main object (and counts the rest)
+#   2. clip recognizer names the item + bin
+#   3. if its unsure, the material classifier guesses by material
+def analyze(clf, frame, framer=None, recognizer=None):
     bbox = None
+    n_objects = 1
     target = frame
     if framer is not None:
-        bbox = framer.best_bbox(frame)
-        if bbox is not None:
+        cands = framer.candidates(frame)
+        n_objects = len(cands)
+        if cands:
+            bbox = cands[0]
             target = framer.crop(frame, bbox)
 
-    # open-vocabulary item recognition
     if recognizer is not None:
         res = recognizer.recognize(target)
         if res["ok"]:
-            return res["item"], res["conf"], res["bin"], bbox
+            return {"bbox": bbox, "n_objects": n_objects,
+                    "item": res["item"], "bin": res["bin"], "conf": res["conf"],
+                    "sure": True, "alts": res["top"],
+                    "question": make_question(res["cond"], res["bin"])}
+        # clip unsure -> material guess as tentative answer, keep clips top items
+        cls, conf, bin_info = clf.predict(target)
+        return {"bbox": bbox, "n_objects": n_objects,
+                "item": cls, "bin": bin_info, "conf": conf,
+                "sure": False, "alts": res["top"], "question": None}
 
-    # material classifier fallback (clip was unsure)
     cls, conf, bin_info = clf.predict(target)
-    return cls, conf, bin_info, bbox
+    return {"bbox": bbox, "n_objects": n_objects,
+            "item": cls, "bin": bin_info, "conf": conf,
+            "sure": True, "alts": [], "question": None}
+
+
+def print_result(name, res):
+    info = res["bin"]
+    tag = "" if res["sure"] else "  (unsicher)"
+    print("%s -> %s (%.0f%%) [%s]  (erkannt: %s)%s" % (
+        name, info["name"], res["conf"] * 100, info["law"], res["item"], tag))
+    if res["n_objects"] > 1:
+        print("  hinweis: %d objekte gefunden, groesstes klassifiziert" % res["n_objects"])
+    if not res["sure"] and res["alts"]:
+        print("  meintest du eines davon?")
+        for de, key, cond, p in res["alts"]:
+            print("    - %s -> %s (%.0f%%)" % (de, BINS[key]["name"], p * 100))
+    q = res["question"]
+    if q:
+        print("  rueckfrage: %s" % q["text"])
+        print("    ja   -> %s" % q["yes_bin"]["name"])
+        print("    nein -> %s" % q["no_bin"]["name"])
 
 
 def run_image(path, clf, framer=None, recognizer=None):
     img = cv2.imread(path)
-    cls, conf, bin_info, _ = classify(clf, img, framer, recognizer)
-    print("%s -> %s (%.1f%%) [%s]  (erkannt: %s)" % (os.path.basename(path), bin_info["name"], conf * 100, bin_info["law"], cls))
+    res = analyze(clf, img, framer, recognizer)
+    print_result(os.path.basename(path), res)
 
 
 def main():

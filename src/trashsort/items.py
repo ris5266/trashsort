@@ -151,6 +151,15 @@ ITEMS = [
 ]
 
 
+# follow-up question for ambiguous items.
+# "yes" -> use the yes bin, "no" -> keep the item's normal bin
+CONDITIONS = {
+    "pfand": {"q": "Hat der Artikel ein Pfand-Logo?", "yes": "pfand"},
+    "greasy": {"q": "Ist es stark verschmutzt oder fettig?", "yes": "restmuell"},
+    "residue": {"q": "Ist die Dose nicht restlos leer?", "yes": "sondermuell"},
+}
+
+
 # non-trash things so clip can say "not an item" instead of forcing a bin
 DECOYS = [
     "a wooden desk",

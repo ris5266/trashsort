@@ -71,30 +71,3 @@ def get_bin(class_name):
     # unknown stuff goes to restmuell
     key = CLASS_TO_BIN.get(class_name.lower(), "restmuell")
     return BINS[key]
-
-
-# which bin each coco object goes into
-COCO_TO_BIN = {
-    # electronics -> Elektroschrott
-    "tv": "elektroschrott", "laptop": "elektroschrott", "mouse": "elektroschrott",
-    "remote": "elektroschrott", "keyboard": "elektroschrott", "cell phone": "elektroschrott",
-    "microwave": "elektroschrott", "oven": "elektroschrott", "toaster": "elektroschrott",
-    "refrigerator": "elektroschrott", "hair drier": "elektroschrott", "clock": "elektroschrott",
-    # food -> Biomuell
-    "banana": "biomuell", "apple": "biomuell", "orange": "biomuell", "broccoli": "biomuell",
-    "carrot": "biomuell", "sandwich": "biomuell", "hot dog": "biomuell", "pizza": "biomuell",
-    "donut": "biomuell", "cake": "biomuell",
-    # paper -> Papier
-    "book": "papier",
-    # drinking glasses / ceramics / cutlery etc -> Restmuell
-    "wine glass": "restmuell", "cup": "restmuell", "bowl": "restmuell", "fork": "restmuell",
-    "knife": "restmuell", "spoon": "restmuell", "scissors": "restmuell", "vase": "restmuell",
-    "toothbrush": "restmuell", "teddy bear": "restmuell",
-}
-
-
-def coco_bin(class_name):
-    key = COCO_TO_BIN.get(class_name.lower())
-    if key is None:
-        return None
-    return BINS[key]
