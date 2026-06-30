@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Project data & artifacts (large, regenerate via scripts)
+data/*
+!data/eval/
+runs/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+wandb/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
