@@ -4,6 +4,7 @@
 #   pfand   -> ask for a deposit logo, then pfand instead
 #   greasy  -> if dirty/greasy it goes to restmuell
 #   residue -> if not fully empty it goes to sondermuell
+#   coated  -> if foil/glitter coated it goes to restmuell
 
 ITEMS = [
     # --- gelbe tonne (plastic / metal / composite packaging) ---
@@ -49,7 +50,7 @@ ITEMS = [
     {"en": "a cardboard tube", "de": "Pappröhre", "bin": "papier"},
     {"en": "an advertising flyer", "de": "Prospekt", "bin": "papier"},
     {"en": "a shoe box", "de": "Schuhkarton", "bin": "papier"},
-    {"en": "sheets of wrapping paper", "de": "Geschenkpapier", "bin": "papier", "cond": "greasy"},
+    {"en": "sheets of wrapping paper", "de": "Geschenkpapier", "bin": "papier", "cond": "coated"},
 
     # --- altglas (bottle/jar glass only, by container) ---
     {"en": "a glass wine bottle", "de": "Weinflasche", "bin": "altglas"},
@@ -59,7 +60,7 @@ ITEMS = [
     {"en": "a glass pickle jar", "de": "Gurkenglas", "bin": "altglas"},
     {"en": "a glass food jar", "de": "Einmachglas", "bin": "altglas"},
     {"en": "a small glass baby food jar", "de": "Babygläschen", "bin": "altglas"},
-    {"en": "a glass olive oil bottle", "de": "Ölflasche", "bin": "altglas"},
+    {"en": "a glass olive oil bottle", "de": "Öl-Glasflasche", "bin": "altglas"},
 
     # --- biomuell (organic) ---
     {"en": "a banana peel", "de": "Bananenschale", "bin": "biomuell"},
@@ -110,7 +111,7 @@ ITEMS = [
     {"en": "a rechargeable battery pack", "de": "Akku", "bin": "sondermuell"},
     {"en": "a button cell battery", "de": "Knopfzelle", "bin": "sondermuell"},
     {"en": "a paint can with leftover paint", "de": "Farbeimer", "bin": "sondermuell"},
-    {"en": "a bottle of motor oil", "de": "Motoröl", "bin": "sondermuell"},
+    {"en": "a plastic bottle of motor oil", "de": "Motoröl", "bin": "sondermuell"},
     {"en": "a packet of medication pills", "de": "Medikamente", "bin": "sondermuell"},
     {"en": "a bottle of nail polish", "de": "Nagellack", "bin": "sondermuell"},
     {"en": "a tube of glue", "de": "Klebstofftube", "bin": "sondermuell"},
@@ -157,6 +158,7 @@ CONDITIONS = {
     "pfand": {"q": "Hat der Artikel ein Pfand-Logo?", "yes": "pfand"},
     "greasy": {"q": "Ist es stark verschmutzt oder fettig?", "yes": "restmuell"},
     "residue": {"q": "Ist die Dose nicht restlos leer?", "yes": "sondermuell"},
+    "coated": {"q": "Ist es beschichtet oder glänzend (Folie, Glitzer)?", "yes": "restmuell"},
 }
 
 
