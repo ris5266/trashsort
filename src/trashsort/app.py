@@ -43,12 +43,12 @@ def annotate(bgr, bbox, text, color):
     return out
 
 # run the pipeline and build the answer text
-def sort(image):
+def sort(image, point=None):
     if image is None:
         return None, "Please upload an image first."
 
     bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    res = analyze(CLF, bgr, FRAMER, RECOG)
+    res = analyze(CLF, bgr, FRAMER, RECOG, point=point)
     info = res["bin"]
     annotated = annotate(bgr, res["bbox"], "%s -> %s" % (res["item"], info["name"]), info["color"])
 
@@ -59,13 +59,25 @@ def sort(image):
                           for de, k, c, p in res["alts"])
         parts.append("\n\n_Unsicher – meintest du:_\n" + lines)
     if res["n_objects"] > 1:
-        parts.append("\n\n_%d Objekte gefunden, größtes klassifiziert._" % res["n_objects"])
+        if point is not None:
+            parts.append("\n\n_%d Objekte gefunden, angeklicktes klassifiziert._" % res["n_objects"])
+        else:
+            parts.append("\n\n_%d Objekte gefunden, größtes klassifiziert. "
+                         "Klicke ein Objekt im Bild an, um es auszuwählen._" % res["n_objects"])
     q = res["question"]
     if q:
         parts.append("\n\n**Rückfrage:** %s  \n→ ja: %s  \n→ nein: %s" % (
             q["text"], q["yes_bin"]["name"], q["no_bin"]["name"]))
     return to_rgb(annotated), "".join(parts)
 
+def sort_at(image, evt: gr.SelectData):
+    point = (evt.index[0], evt.index[1])
+    out_img, out_md = sort(image, point)
+    return point, out_img, out_md
+
+def sort_fresh(image):
+    out_img, out_md = sort(image, None)
+    return None, out_img, out_md
 
 CSS = """
 #img_in, #out_img { height: 460px !important; }
@@ -73,12 +85,12 @@ CSS = """
 #sort_btn { height: 48px !important; flex-grow: 0 !important; }
 """
 
-
 def build():
     with gr.Blocks(title="trashsort") as demo:
         gr.HTML("<style>%s</style>" % CSS)
         gr.Markdown("# 🗑️ trashsort\n"
                     "Upload an image of an item. The object is cut out, recognized and assigned to the correct German bin.")
+        point = gr.State(None)
         with gr.Row():
             with gr.Column(scale=1):
                 img_in = gr.Image(label="Upload image", type="numpy", sources=["upload"], height=460, elem_id="img_in")
@@ -87,9 +99,10 @@ def build():
                 out_img = gr.Image(label="Recognition", type="numpy", format="png", height=460, elem_id="out_img")
                 out_md = gr.Markdown()
 
-        btn.click(sort, [img_in], [out_img, out_md])
-        # run automatically when an image is uploaded
-        img_in.change(sort, [img_in], [out_img, out_md])
+        btn.click(sort, [img_in, point], [out_img, out_md])
+        img_in.select(sort_at, [img_in], [point, out_img, out_md])
+        img_in.upload(sort_fresh, [img_in], [point, out_img, out_md])
+        img_in.clear(lambda: (None, None, ""), None, [point, out_img, out_md])
     return demo
 
 

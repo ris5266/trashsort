@@ -50,7 +50,7 @@ def make_question(cond, default_bin):
 #   1. framer cuts out the main object (and counts the rest)
 #   2. clip recognizer names the item + bin
 #   3. if its unsure, the material classifier guesses by material
-def analyze(clf, frame, framer=None, recognizer=None):
+def analyze(clf, frame, framer=None, recognizer=None, point=None):
     bbox = None
     n_objects = 1
     target = frame
@@ -58,7 +58,7 @@ def analyze(clf, frame, framer=None, recognizer=None):
         cands = framer.candidates(frame)
         n_objects = len(cands)
         if cands:
-            bbox = cands[0]
+            bbox = framer.pick(cands, point) if point is not None else cands[0]
             target = framer.crop(frame, bbox)
 
     if recognizer is not None:

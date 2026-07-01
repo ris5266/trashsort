@@ -34,6 +34,15 @@ class ObjectFramer:
         c = self.candidates(frame)
         return c[0] if c else None
 
+    # pick the object the user clicked on
+    def pick(self, cands, point):
+        px, py = point
+        inside = [b for b in cands
+                  if b[0] <= px <= b[0] + b[2] and b[1] <= py <= b[1] + b[3]]
+        if inside:
+            return min(inside, key=lambda b: b[2] * b[3])
+        return min(cands, key=lambda b: (b[0] + b[2] / 2 - px) ** 2 + (b[1] + b[3] / 2 - py) ** 2)
+
     def crop(self, frame, bbox, pad=0.04):
         h, w = frame.shape[:2]
         x, y, bw, bh = bbox
