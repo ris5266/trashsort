@@ -67,16 +67,24 @@ def sort(image):
     return to_rgb(annotated), "".join(parts)
 
 
+CSS = """
+#img_in, #out_img { height: 460px !important; }
+#img_in img, #out_img img { height: 460px !important; object-fit: contain; }
+#sort_btn { height: 48px !important; flex-grow: 0 !important; }
+"""
+
+
 def build():
     with gr.Blocks(title="trashsort") as demo:
+        gr.HTML("<style>%s</style>" % CSS)
         gr.Markdown("# 🗑️ trashsort\n"
                     "Upload an image of an item. The object is cut out, recognized and assigned to the correct German bin.")
-        with gr.Row(equal_height=True):
+        with gr.Row():
             with gr.Column(scale=1):
-                img_in = gr.Image(label="Upload image", type="numpy", sources=["upload"], height=460)
-                btn = gr.Button("Sort", variant="primary")
+                img_in = gr.Image(label="Upload image", type="numpy", sources=["upload"], height=460, elem_id="img_in")
+                btn = gr.Button("Sort", variant="primary", elem_id="sort_btn")
             with gr.Column(scale=1):
-                out_img = gr.Image(label="Recognition", type="numpy", format="png", height=460)
+                out_img = gr.Image(label="Recognition", type="numpy", format="png", height=460, elem_id="out_img")
                 out_md = gr.Markdown()
 
         btn.click(sort, [img_in], [out_img, out_md])
