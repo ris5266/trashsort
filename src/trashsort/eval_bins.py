@@ -2,6 +2,10 @@ import os
 import csv
 
 import cv2
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 from . import config
 from .bins import BINS
@@ -11,6 +15,27 @@ from .frame import ObjectFramer
 
 # reverse map: bin display name -> bin key
 NAME_TO_KEY = {v["name"]: k for k, v in BINS.items()}
+
+
+# confusion matrix over the whole pipeline (true bin vs predicted bin)
+def save_confusion(y_true, y_pred):
+    labels = list(BINS.keys())
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    plt.figure(figsize=(8, 7))
+    plt.imshow(cm, cmap="Blues")
+    plt.xticks(range(len(labels)), labels, rotation=45, ha="right")
+    plt.yticks(range(len(labels)), labels)
+    plt.xlabel("predicted bin")
+    plt.ylabel("true bin")
+    for i in range(len(labels)):
+        for j in range(len(labels)):
+            if cm[i, j]:
+                plt.text(j, i, cm[i, j], ha="center", va="center")
+    plt.colorbar()
+    plt.tight_layout()
+    out = os.path.join(config.CHECKPOINT_DIR, "bin_confusion.png")
+    plt.savefig(out, dpi=120)
+    print("saved", out)
 
 
 def load_labels():
@@ -34,6 +59,7 @@ def main():
     # per-stage tallies: [correct, total]
     stage = {"recognizer": [0, 0], "classifier": [0, 0]}
     misses = []
+    y_true, y_pred = [], []
 
     for r in rows:
         img_path = os.path.join(config.EVAL_DIR, "images", r["file"])
@@ -58,6 +84,8 @@ def main():
             which = "classifier"
 
         pred_bin = NAME_TO_KEY.get(bin_info["name"], "?")
+        y_true.append(true_bin)
+        y_pred.append(pred_bin)
         ok = pred_bin == true_bin
         total += 1
         correct += ok
@@ -75,6 +103,8 @@ def main():
     print("\nmisses (file | true -> pred | stage | named):")
     for m in misses:
         print("  %s | %s -> %s | %s | %s" % m)
+
+    save_confusion(y_true, y_pred)
 
 
 if __name__ == "__main__":
