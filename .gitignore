@@ -9,6 +9,8 @@ venv/
 # Project data & artifacts (large, regenerate via scripts)
 data/*
 !data/eval/
+data/eval/*
+!data/eval/labels.csv
 runs/
 checkpoints/
 *.pt
