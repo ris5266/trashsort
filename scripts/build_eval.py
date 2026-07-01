@@ -10,9 +10,6 @@ from trashsort import config
 
 REPO = "omasteam/waste-garbage-management-dataset"
 
-
-# rebuild the eval images from labels.csv. we only ship our own labels, not the
-# dataset images (they are scraped/stock photos), so we re-download them here.
 def main():
     csv_path = os.path.join(config.EVAL_DIR, "labels.csv")
     img_dir = os.path.join(config.EVAL_DIR, "images")
@@ -21,8 +18,8 @@ def main():
     n = 0
     with open(csv_path) as f:
         for r in csv.DictReader(f):
-            name = r["file"]                # e.g. battery__battery_121.jpg
-            orig = name.split("__", 1)[1]   # battery_121.jpg
+            name = r["file"]
+            orig = name.split("__", 1)[1]
             src = hf_hub_download(REPO, "%s/%s" % (r["material"], orig), repo_type="dataset")
             with open(src, "rb") as a, open(os.path.join(img_dir, name), "wb") as b:
                 b.write(a.read())

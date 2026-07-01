@@ -20,7 +20,6 @@ def clahe(img):
 def normalize_lighting(img):
     return clahe(white_balance(img))
 
-
 def letterbox(img, size=224):
     h, w = img.shape[:2]
     scale = size / max(h, w)

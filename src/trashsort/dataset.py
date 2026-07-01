@@ -25,7 +25,6 @@ def list_images(root):
         if not os.path.isdir(folder):
             continue
         for f in sorted(os.listdir(folder)):
-            # skip hidden files like macos ._ appledouble junk
             if f.startswith(".") or not f.lower().endswith(EXTS):
                 continue
             samples.append((os.path.join(folder, f), label))
@@ -33,7 +32,7 @@ def list_images(root):
 
 
 def make_splits(root):
-    # split each class separately so every split has all classes
+    # split each class separately
     rng = random.Random(config.SEED)
     by_class = {i: [] for i in range(len(config.CLASSES))}
     for path, label in list_images(root):

@@ -3,7 +3,6 @@ import numpy as np
 
 from ultralytics import FastSAM
 
-
 # class-agnostic object framing
 class ObjectFramer:
     def __init__(self, model="FastSAM-s.pt", conf=0.4):

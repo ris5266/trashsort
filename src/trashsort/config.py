@@ -29,7 +29,7 @@ SEED = 42
 USE_LIGHTING_NORM = True
 FREEZE_EPOCHS = 3
 
-# below this confidence the classifier says "unsure" instead of guessing
+# below this confidence the classifier says "unsure"
 CONF_THRESH = 0.60
 
 # clip recognizer

@@ -66,7 +66,6 @@ CLASS_TO_BIN = {
     "trash": "restmuell",
 }
 
-
 def get_bin(class_name):
     # unknown stuff goes to restmuell
     key = CLASS_TO_BIN.get(class_name.lower(), "restmuell")

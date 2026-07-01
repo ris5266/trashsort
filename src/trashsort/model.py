@@ -1,8 +1,7 @@
 import torch.nn as nn
 from torchvision import models
 
-
-# build a pretrained model and swap the last layer for the 6 classes
+# build pretrained model
 def build_model(arch, num_classes, pretrained=True):
     if arch == "efficientnet_b0":
         w = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
@@ -18,7 +17,6 @@ def build_model(arch, num_classes, pretrained=True):
 
 
 def freeze_backbone(model, arch, freeze):
-    # freeze everything except the final layer
     if arch == "efficientnet_b0":
         for p in model.features.parameters():
             p.requires_grad = not freeze
