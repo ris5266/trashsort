@@ -32,6 +32,9 @@
 
   ![Sorting items into the right German bins](demo.gif)
 
+  ![Multiple Object Recognition](demo2.gif)
+
+
 </div>
 
 ## Confusion matrix

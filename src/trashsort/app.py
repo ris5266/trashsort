@@ -43,12 +43,13 @@ def annotate(bgr, bbox, text, color):
     return out
 
 # run the pipeline and build the answer text
-def sort(image, point=None):
+def sort(image, point=None, mode="full"):
     if image is None:
         return None, "Please upload an image first."
 
     bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    res = analyze(CLF, bgr, FRAMER, RECOG, point=point)
+    recog = RECOG if mode == "full" else None
+    res = analyze(CLF, bgr, FRAMER, recog, point=point)
     info = res["bin"]
     annotated = annotate(bgr, res["bbox"], "%s -> %s" % (res["item"], info["name"]), info["color"])
 
@@ -70,13 +71,13 @@ def sort(image, point=None):
             q["text"], q["yes_bin"]["name"], q["no_bin"]["name"]))
     return to_rgb(annotated), "".join(parts)
 
-def sort_at(image, evt: gr.SelectData):
+def sort_at(image, mode, evt: gr.SelectData):
     point = (evt.index[0], evt.index[1])
-    out_img, out_md = sort(image, point)
+    out_img, out_md = sort(image, point, mode)
     return point, out_img, out_md
 
-def sort_fresh(image):
-    out_img, out_md = sort(image, None)
+def sort_fresh(image, mode):
+    out_img, out_md = sort(image, None, mode)
     return None, out_img, out_md
 
 CSS = """
@@ -91,18 +92,24 @@ def build():
         gr.Markdown("# 🗑️ trashsort\n"
                     "Upload an image of an item. The object is cut out, recognized and assigned to the correct German bin.")
         point = gr.State(None)
+        modes = [
+            ("Object & material recognition", "full"),
+            ("Material recognition only", "material"),
+        ]
         with gr.Row():
             with gr.Column(scale=1):
                 img_in = gr.Image(label="Upload image", type="numpy", sources=["upload"], height=460, elem_id="img_in")
+                mode = gr.Radio(choices=modes, value="full", label="Mode")
                 btn = gr.Button("Sort", variant="primary", elem_id="sort_btn")
             with gr.Column(scale=1):
                 out_img = gr.Image(label="Recognition", type="numpy", format="png", height=460, elem_id="out_img")
                 out_md = gr.Markdown()
 
-        btn.click(sort, [img_in, point], [out_img, out_md])
-        img_in.select(sort_at, [img_in], [point, out_img, out_md])
-        img_in.upload(sort_fresh, [img_in], [point, out_img, out_md])
+        btn.click(sort, [img_in, point, mode], [out_img, out_md])
+        img_in.select(sort_at, [img_in, mode], [point, out_img, out_md])
+        img_in.upload(sort_fresh, [img_in, mode], [point, out_img, out_md])
         img_in.clear(lambda: (None, None, ""), None, [point, out_img, out_md])
+        mode.change(sort, [img_in, point, mode], [out_img, out_md])
     return demo
 
 
