@@ -5,46 +5,63 @@
 # trashsort
 </div>
 
-### A smart trash sorter that recognizes items and tells you which German recycling bin it belongs in: built with Python, [PyTorch](https://github.com/pytorch/pytorch), [Gradio](https://github.com/gradio-app/gradio), [Ultralytics FastSAM](https://github.com/ultralytics/ultralytics) and [OpenCLIP](https://github.com/mlfoundations/open_clip), with a hand-written knowledge base of common German household items and a self-trained [EfficientNet-B0](https://github.com/garythung/trashnet) fallback
+### A smart trash sorter that recognizes items and tells you which German recycling bin they belong in. Built with Python, [PyTorch](https://github.com/pytorch/pytorch), [Gradio](https://github.com/gradio-app/gradio), [Ultralytics FastSAM](https://github.com/ultralytics/ultralytics), [OpenCLIP](https://github.com/mlfoundations/open_clip) and a self trained [EfficientNet-B0](https://github.com/garythung/trashnet) as a fallback
 
 <div align="center">
 
-  ---
-  [**Features**](#features) | [**Install**](#install) | [**How it works**](#how-it-works) | [**Evolution**](#how-the-project-evolved)
-
-  ---
-
-</div>
-
-## Features
-
-🗑️ **Sorts into 9 German bins**: maps items to Papier, Gelbe Tonne, Altglas, Biomüll, Restmüll, Pfand, Sondermüll, Elektroschrott and Altkleider following the *Mülltrennung* rules
-
-🔍 **Open-vocabulary recognition**: a **CLIP (ViT-L/14)** recognizer scores the object against a curated list of **127 household items**, each mapped to its bin, so it knows *specific* things (battery → Sondermüll, Tetra Pak → Gelbe Tonne, shoes → Altkleider)
-
-🧠 **Self trained CNN as fallback**: when CLIP isn't confident, a self-trained **EfficientNet-B0** material classifier (glass, plastic, paper, cardboard, metal, organic, trash) takes over
-
-✂️ **FastSAM segmentation**: cuts the main object out of a cluttered photo first, so the background doesn't confuse the recognition
-
-🖥️ **All in a Gradio app**: upload an image and see what bin the object belongs to
-
-<div align="center">
+  <hr>
+  <a href="#how-it-works"><b>How it works</b></a> | <a href="#how-well-it-works"><b>Results</b></a> | <a href="#install"><b>Install</b></a>
+  <hr>
 
   ![Sorting items into the right German bins](demo.gif)
 
   ![Multiple Object Recognition](demo2.gif)
 
-
 </div>
 
-## Confusion matrix
+## How it works
+
+Upload a photo and trashsort runs it through a three stage pipeline:
+
+  ![Pipeline Process](pipeline.png)
+
+1. **Cut out the object:** FastSAM finds the main object in your photo and crops it out
+
+2. **Figure out what the object is:** CLIP (ViT-L/14) compares the crop against my list of 127 household items, where each item already knows which bin it belongs in
+
+3. **Fall back to the material.** For things CLIP doesn't recognize, my own EfficientNet-B0 model looks at what the object is made of (cardboard, glass, metal, organic, paper, plastic or trash) and picks a bin based on that
+
+### German bins it maps to:
+
+| Bin | German              | Typical contents                      |
+|-----------------|---------------------|---------------------------------------|
+| `papier`        | Blaue Tonne         | paper, cardboard, boxes               |
+| `gelbe_tonne`   | Gelbe Tonne / Sack  | plastic and metal packaging, composites |
+| `altglas`       | Glascontainer       | glass bottles and jars                |
+| `biomuell`      | Braune Tonne        | food and organic waste                |
+| `restmuell`     | Schwarze Tonne      | residual waste                        |
+| `pfand`         | Pfandrückgabe       | deposit bottles and cans              |
+| `sondermuell`   | Schadstoffsammlung  | batteries, chemicals, paint, oil      |
+| `elektroschrott`| Elektroschrott      | electronic waste                      |
+| `altkleider`    | Altkleidercontainer | wearable clothes and shoes            |
+
+## How well it works
 
 <div align="center">
 
-  <img src="confusion_matrix.png" alt="confusion matrix on the held-out test set" width="520px"/>
+  <img src="confusion_matrix.png" alt="confusion matrix on the unseen test set" width="520px"/>
 </div>
 
-The self trained **EfficientNet-B0 material classifier** was tested on **737 new images** from TrashNet, the real fruit & veg photos and Freiburg Groceries packaging. It reaches **94.8% accuracy** across the 7 material classes, with `organic` (99%) and `cardboard` (96%) being the strongest.
+The self trained **EfficientNet-B0 material classifier** was tested on **737 new images** taken from across multiple datasets. It reaches **94.8% accuracy** across the 7 material classes.
+
+To see how much the CLIP recognizer really adds, I built a set of **100 real world images** covering every bin and evaluated two setups:
+
+| Method | Bin accuracy |
+|--------|--------------|
+| Material classifier only | **48.0%** |
+| **Full pipeline** (FastSAM crop, CLIP recognizer, CNN fallback) | **85.0%** |
+
+Putting the CLIP recognizer in front of the material classifier **nearly doubles** the correct bin rate, from about 48% to **85%**.
 
 ## Install
 
@@ -53,14 +70,20 @@ The self trained **EfficientNet-B0 material classifier** was tested on **737 new
 git clone https://github.com/ris5266/trashsort.git
 cd trashsort
 ```
-
+ 
 2. **Install the dependencies**
 ```
 pip install -r requirements.txt
 pip install -e .
 ```
+ 
+5. **Launch the gradio app**
+```
+python -m trashsort.app
+```
 
-3. *(optional)* **Train the material fallback classifier**
+Optional:
+1. **Train the material fallback classifier**
 ```
 python scripts/download_trashnet.py     # TrashNet dataset
 python scripts/download_organic.py      # organic dataset
@@ -68,58 +91,9 @@ python scripts/download_groceries.py    # supermarket dataset
 python scripts/add_groceries.py         # map packaging -> material classes
 python -m trashsort.train
 ```
-
-4. *(optional)* **Fetch the eval images** and run the benchmark
+ 
+2. **Fetch the eval images and run the benchmark**
 ```
 python scripts/build_eval.py
 python -m trashsort.eval_bins
 ```
-
-5. **Launch the gradio app**
-```
-python -m trashsort.app
-```
-or run a single image from the command line:
-```
-python -m trashsort.infer --image photo.jpg
-```
-
-## How it works
-
-When you upload an image, it runs through a three-stage pipeline:
-
-1. **Cut out the object:** the pretrained **FastSAM** segments the main object and crops it out of the background, so a messy photo becomes a clean cut-out.
-
-2. **Recognize the item:** **CLIP (ViT-L/14)** scores the crop against my **127-item knowledge base**. If it's confident, the named item maps straight to its bin. Ambiguous items raise a follow-up question (`e.g. deposit bottle → Hat es ein Pfand-Logo? → Pfand`) and when it's unsure it returns its top-3 guesses instead of forcing one.
-
-3. **Classify the material:** if CLIP isn't confident, my trained **EfficientNet-B0** CNN, predicts the *material* of the object `(cardboard, glass, metal, organic, paper, plastic, trash)`, which maps to a bin.
-
-### German bins it maps to
-
-| Bin (`bins.py`) | German              | Typical contents                      |
-|-----------------|---------------------|---------------------------------------|
-| `papier`        | Blaue Tonne         | paper, cardboard, boxes               |
-| `gelbe_tonne`   | Gelbe Tonne / Sack  | plastic & metal packaging, composites |
-| `altglas`       | Glascontainer       | glass bottles & jars                  |
-| `biomuell`      | Braune Tonne        | food / organic waste                  |
-| `restmuell`     | Schwarze Tonne      | residual waste                        |
-| `pfand`         | Pfandrückgabe       | deposit bottles & cans                |
-| `sondermuell`   | Schadstoffsammlung  | batteries, chemicals, paint, oil      |
-| `elektroschrott`| Elektroschrott      | electronics / e-waste                 |
-| `altkleider`    | Altkleidercontainer | wearable clothes & shoes              |
-
-## How the project evolved
-
-1. **TrashNet** had no food category, so organic waste landed in "trash" → added an `organic` class to the **EfficientNet-B0** classifier.
-
-2. A classifier must pick one of its known classes for *everything* → added a pretrained **YOLOv8-seg (COCO)** object detector for things like electronics + a **confidence gate** for unknowns.
-
-3. Fine-tuned **YOLOv8-seg** on the **TACO** litter dataset to output bins directly, but TACO has almost no food/glass (dropped later).
-
-4. The image classifier got confused by the background → cut out the object first with **FastSAM**.
-
-5. Dataset missing everyday items (e.g. chips bags) → added the **Freiburg Groceries** dataset and mapped each product to its material.
-
-6. The bin choice was still a hit-or-miss: **COCO** only knows 80 generic classes and rarely matched real trash (a bottle became a *"vase"* → Restmüll) → replaced the YOLO detector with an **open-vocabulary CLIP recognizer** scored against a curated list of German household items.
-
-7. Added top-3 when unsure, follow-up questions, multi-object and a new **Altkleider** bin for clothes & shoes.
