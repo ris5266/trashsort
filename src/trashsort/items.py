@@ -1,15 +1,10 @@
 # the knowledge base: known household items -> german bin.
 # "en" is the phrase clip scores against, "de" is shown to the user.
-# "cond" marks items where the bin depends on something we must ask about.
-#   pfand   -> ask for a deposit logo, then pfand instead
-#   greasy  -> if dirty/greasy it goes to restmuell
-#   residue -> if not fully empty it goes to sondermuell
-#   coated  -> if foil/glitter coated it goes to restmuell
 
 ITEMS = [
     # --- gelbe tonne (plastic / metal / composite packaging) ---
     {"en": "an empty plastic yogurt cup", "de": "Joghurtbecher", "bin": "gelbe_tonne"},
-    {"en": "a plastic drink bottle", "de": "Plastikflasche", "bin": "gelbe_tonne", "cond": "pfand"},
+    {"en": "a plastic drink bottle", "de": "Plastikflasche", "bin": "gelbe_tonne"},
     {"en": "a plastic shampoo bottle", "de": "Shampooflasche", "bin": "gelbe_tonne"},
     {"en": "a plastic detergent bottle", "de": "Waschmittelflasche", "bin": "gelbe_tonne"},
     {"en": "an empty chip bag", "de": "Chipstüte", "bin": "gelbe_tonne"},
@@ -19,7 +14,7 @@ ITEMS = [
     {"en": "bubble wrap", "de": "Luftpolsterfolie", "bin": "gelbe_tonne"},
     {"en": "a styrofoam food tray", "de": "Styroporschale", "bin": "gelbe_tonne"},
     {"en": "a sheet of aluminium foil", "de": "Alufolie", "bin": "gelbe_tonne"},
-    {"en": "a drinks can", "de": "Getränkedose", "bin": "gelbe_tonne", "cond": "pfand"},
+    {"en": "a drinks can", "de": "Getränkedose", "bin": "gelbe_tonne"},
     {"en": "a food tin can", "de": "Konservendose", "bin": "gelbe_tonne"},
     {"en": "a metal bottle cap", "de": "Kronkorken", "bin": "gelbe_tonne"},
     {"en": "an aluminium food tray", "de": "Aluschale", "bin": "gelbe_tonne"},
@@ -32,7 +27,7 @@ ITEMS = [
     {"en": "a plastic meat tray", "de": "Plastikschale", "bin": "gelbe_tonne"},
     {"en": "a plastic lid", "de": "Plastikdeckel", "bin": "gelbe_tonne"},
     {"en": "a plastic net bag for fruit", "de": "Obstnetz", "bin": "gelbe_tonne"},
-    {"en": "an empty aerosol spray can", "de": "Spraydose", "bin": "gelbe_tonne", "cond": "residue"},
+    {"en": "an empty aerosol spray can", "de": "Spraydose", "bin": "gelbe_tonne"},
 
     # --- papier (paper / cardboard) ---
     {"en": "a cardboard box", "de": "Karton", "bin": "papier"},
@@ -46,16 +41,16 @@ ITEMS = [
     {"en": "a cardboard egg carton", "de": "Eierkarton", "bin": "papier"},
     {"en": "a paper envelope", "de": "Briefumschlag", "bin": "papier"},
     {"en": "a cereal box", "de": "Müslikarton", "bin": "papier"},
-    {"en": "a pizza box", "de": "Pizzakarton", "bin": "papier", "cond": "greasy"},
+    {"en": "a pizza box", "de": "Pizzakarton", "bin": "papier"},
     {"en": "a cardboard tube", "de": "Pappröhre", "bin": "papier"},
     {"en": "an advertising flyer", "de": "Prospekt", "bin": "papier"},
     {"en": "a shoe box", "de": "Schuhkarton", "bin": "papier"},
-    {"en": "sheets of wrapping paper", "de": "Geschenkpapier", "bin": "papier", "cond": "coated"},
+    {"en": "sheets of wrapping paper", "de": "Geschenkpapier", "bin": "papier"},
 
     # --- altglas (bottle/jar glass only, by container) ---
     {"en": "a glass wine bottle", "de": "Weinflasche", "bin": "altglas"},
-    {"en": "a glass beer bottle", "de": "Bierflasche", "bin": "altglas", "cond": "pfand"},
-    {"en": "an empty glass bottle", "de": "Glasflasche", "bin": "altglas", "cond": "pfand"},
+    {"en": "a glass beer bottle", "de": "Bierflasche", "bin": "altglas"},
+    {"en": "an empty glass bottle", "de": "Glasflasche", "bin": "altglas"},
     {"en": "a glass jam jar", "de": "Marmeladenglas", "bin": "altglas"},
     {"en": "a glass pickle jar", "de": "Gurkenglas", "bin": "altglas"},
     {"en": "a glass food jar", "de": "Einmachglas", "bin": "altglas"},
@@ -150,17 +145,6 @@ ITEMS = [
     {"en": "a bath towel", "de": "Handtuch", "bin": "altkleider"},
     {"en": "a scarf", "de": "Schal", "bin": "altkleider"},
 ]
-
-
-# follow-up question for ambiguous items.
-# "yes" -> use the yes bin, "no" -> keep the item's normal bin
-CONDITIONS = {
-    "pfand": {"q": "Hat der Artikel ein Pfand-Logo?", "yes": "pfand"},
-    "greasy": {"q": "Ist es stark verschmutzt oder fettig?", "yes": "restmuell"},
-    "residue": {"q": "Ist die Dose nicht restlos leer?", "yes": "sondermuell"},
-    "coated": {"q": "Ist es beschichtet oder glänzend (Folie, Glitzer)?", "yes": "restmuell"},
-}
-
 
 # non-trash things so clip can say "not an item" instead of forcing a bin
 DECOYS = [

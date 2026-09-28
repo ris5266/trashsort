@@ -16,7 +16,6 @@ MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 
 # hyperparams
-ARCH = "efficientnet_b0"
 IMG_SIZE = 224
 BATCH_SIZE = 32
 EPOCHS = 20
@@ -28,9 +27,6 @@ NUM_WORKERS = 8
 SEED = 42
 USE_LIGHTING_NORM = True
 FREEZE_EPOCHS = 3
-
-# below this confidence the classifier says "unsure"
-CONF_THRESH = 0.60
 
 # clip recognizer
 CLIP_ARCH = "ViT-L-14"

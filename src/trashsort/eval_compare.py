@@ -4,12 +4,10 @@ import csv
 import cv2
 
 from . import config
-from .bins import BINS
+from .bins import BIN_NAME_TO_KEY
 from .infer import Classifier
 from .clip_recognizer import ClipRecognizer
 from .frame import ObjectFramer
-
-NAME_TO_KEY = {v["name"]: k for k, v in BINS.items()}
 
 def load_labels():
     path = os.path.join(config.EVAL_DIR, "labels.csv")
@@ -42,7 +40,7 @@ def main():
 
         # material classifier only, whole image
         _, _, bin_info = clf.predict(img)
-        only_whole += NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
+        only_whole += BIN_NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
 
         # cut out the main object
         bbox = framer.best_bbox(img)
@@ -50,7 +48,7 @@ def main():
 
         # material classifier only, framed crop
         _, _, bin_info = clf.predict(target)
-        only_crop += NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
+        only_crop += BIN_NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
 
         # full pipeline: clip first, material classifier as fallback
         res = recognizer.recognize(target)
@@ -58,7 +56,7 @@ def main():
             bin_info = res["bin"]
         else:
             _, _, bin_info = clf.predict(target)
-        full += NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
+        full += BIN_NAME_TO_KEY.get(bin_info["name"], "?") == true_bin
 
     pct = lambda c: 100.0 * c / max(total, 1)
     print("n = %d" % total)

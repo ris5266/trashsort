@@ -57,7 +57,7 @@ def sort(image, point=None, mode="full"):
         info["name"], res["conf"] * 100, res["item"], info["law"])]
     if not res["sure"] and res["alts"]:
         lines = "\n".join("- %s → %s (%.0f%%)" % (de, BINS[k]["name"], p * 100)
-                          for de, k, c, p in res["alts"])
+                          for de, k, p in res["alts"])
         parts.append("\n\n_Unsicher – meintest du:_\n" + lines)
     if res["n_objects"] > 1:
         if point is not None:
@@ -65,10 +65,6 @@ def sort(image, point=None, mode="full"):
         else:
             parts.append("\n\n_%d Objekte gefunden, größtes klassifiziert. "
                          "Klicke ein Objekt im Bild an, um es auszuwählen._" % res["n_objects"])
-    q = res["question"]
-    if q:
-        parts.append("\n\n**Rückfrage:** %s  \n→ ja: %s  \n→ nein: %s" % (
-            q["text"], q["yes_bin"]["name"], q["no_bin"]["name"]))
     return to_rgb(annotated), "".join(parts)
 
 def sort_at(image, mode, evt: gr.SelectData):

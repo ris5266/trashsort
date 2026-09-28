@@ -77,7 +77,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
  
-5. **Launch the gradio app**
+3. **Launch the Gradio app**
 ```
 python -m trashsort.app
 ```

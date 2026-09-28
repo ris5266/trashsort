@@ -19,15 +19,3 @@ def clahe(img):
 
 def normalize_lighting(img):
     return clahe(white_balance(img))
-
-def letterbox(img, size=224):
-    h, w = img.shape[:2]
-    scale = size / max(h, w)
-    nh, nw = int(round(h * scale)), int(round(w * scale))
-    resized = cv2.resize(img, (nw, nh))
-
-    out = np.full((size, size, 3), 114, dtype=img.dtype)
-    top = (size - nh) // 2
-    left = (size - nw) // 2
-    out[top:top + nh, left:left + nw] = resized
-    return out

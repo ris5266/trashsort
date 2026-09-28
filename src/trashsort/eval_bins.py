@@ -8,14 +8,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 from . import config
-from .bins import BINS
+from .bins import BINS, BIN_NAME_TO_KEY
 from .infer import Classifier
 from .clip_recognizer import ClipRecognizer
 from .frame import ObjectFramer
-
-# reverse map: bin display name -> bin key
-NAME_TO_KEY = {v["name"]: k for k, v in BINS.items()}
-
 
 # confusion matrix over the whole pipeline (true bin vs predicted bin)
 def save_confusion(y_true, y_pred):
@@ -83,7 +79,7 @@ def main():
             name, conf, bin_info = clf.predict(target)
             which = "classifier"
 
-        pred_bin = NAME_TO_KEY.get(bin_info["name"], "?")
+        pred_bin = BIN_NAME_TO_KEY.get(bin_info["name"], "?")
         y_true.append(true_bin)
         y_pred.append(pred_bin)
         ok = pred_bin == true_bin

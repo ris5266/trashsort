@@ -31,7 +31,6 @@ def evaluate(model, loader, criterion):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--arch", default=config.ARCH)
     ap.add_argument("--epochs", type=int, default=config.EPOCHS)
     ap.add_argument("--batch-size", type=int, default=config.BATCH_SIZE)
     ap.add_argument("--lr", type=float, default=config.LR)
@@ -41,7 +40,7 @@ def main():
     use_norm = not args.no_lighting_norm
     torch.manual_seed(config.SEED)
     np.random.seed(config.SEED)
-    print("device:", config.DEVICE, "arch:", args.arch)
+    print("device:", config.DEVICE)
 
     # data
     train_s, val_s, test_s = make_splits(config.TRASHNET_DIR)
@@ -56,7 +55,7 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=config.NUM_WORKERS, pin_memory=True, worker_init_fn=worker_init)
 
     # model
-    model = build_model(args.arch, len(config.CLASSES)).to(config.DEVICE)
+    model = build_model(len(config.CLASSES)).to(config.DEVICE)
 
     weights = torch.tensor(class_weights(train_s)).to(config.DEVICE)
     criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=0.05)
@@ -72,7 +71,7 @@ def main():
     for epoch in range(1, args.epochs + 1):
         want_frozen = epoch <= config.FREEZE_EPOCHS
         if want_frozen != frozen:
-            freeze_backbone(model, args.arch, want_frozen)
+            freeze_backbone(model, want_frozen)
             frozen = want_frozen
             print("backbone frozen:", frozen)
 
@@ -95,7 +94,7 @@ def main():
             seen += labels.size(0)
 
         scheduler.step()
-        val_loss, val_acc = evaluate(model, val_loader, criterion)
+        _, val_acc = evaluate(model, val_loader, criterion)
         print("epoch %d train_acc %.3f val_acc %.3f" % (epoch, hits / seen, val_acc))
 
         # save the best model
@@ -103,7 +102,6 @@ def main():
             best_acc = val_acc
             torch.save({
                 "model_state": model.state_dict(),
-                "arch": args.arch,
                 "classes": config.CLASSES,
                 "img_size": config.IMG_SIZE,
                 "use_lighting_norm": use_norm,

@@ -24,7 +24,7 @@ def main():
     # load the trained model
     ckpt = torch.load(ckpt_path, map_location=config.DEVICE, weights_only=False)
     classes = ckpt["classes"]
-    model = build_model(ckpt["arch"], len(classes), pretrained=False)
+    model = build_model(len(classes), pretrained=False)
     model.load_state_dict(ckpt["model_state"])
     model.to(config.DEVICE).eval()
 

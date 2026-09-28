@@ -1,27 +1,14 @@
 import torch.nn as nn
 from torchvision import models
 
-# build pretrained model
-def build_model(arch, num_classes, pretrained=True):
-    if arch == "efficientnet_b0":
-        w = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
-        m = models.efficientnet_b0(weights=w)
-        m.classifier[1] = nn.Linear(m.classifier[1].in_features, num_classes)
-    elif arch == "resnet18":
-        w = models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
-        m = models.resnet18(weights=w)
-        m.fc = nn.Linear(m.fc.in_features, num_classes)
-    else:
-        raise ValueError("unknown arch: " + arch)
-    return m
+# build the EfficientNet material classifier
+def build_model(num_classes, pretrained=True):
+    weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
+    model = models.efficientnet_b0(weights=weights)
+    model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+    return model
 
 
-def freeze_backbone(model, arch, freeze):
-    if arch == "efficientnet_b0":
-        for p in model.features.parameters():
-            p.requires_grad = not freeze
-    else:
-        head = set(id(p) for p in model.fc.parameters())
-        for p in model.parameters():
-            if id(p) not in head:
-                p.requires_grad = not freeze
+def freeze_backbone(model, freeze):
+    for parameter in model.features.parameters():
+        parameter.requires_grad = not freeze

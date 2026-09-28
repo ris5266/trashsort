@@ -48,7 +48,7 @@ class ClipRecognizer:
             if idx >= self.n_items:
                 continue
             it = self.items[idx]
-            top.append((it["de"], it["bin"], it.get("cond"), probs[idx].item()))
+            top.append((it["de"], it["bin"], probs[idx].item()))
             if len(top) == 3:
                 break
 
@@ -58,15 +58,13 @@ class ClipRecognizer:
 
         if is_decoy:
             # best match was a desk/hand/wall -> probably not a trash item
-            return {"ok": False, "reason": "no_item", "conf": conf, "top": top}
+            return {"ok": False, "conf": conf, "top": top}
 
         it = self.items[best]
         return {
             "ok": sure,
-            "reason": "ok" if sure else "unsure",
             "item": it["de"],
             "bin": BINS[it["bin"]],
-            "cond": it.get("cond"),
             "conf": conf,
             "top": top,
         }
