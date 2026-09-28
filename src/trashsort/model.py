@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torchvision import models
 
-# build the EfficientNet material classifier
+# build the efficientnet material classifier
 def build_model(num_classes, pretrained=True):
     weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
     model = models.efficientnet_b0(weights=weights)

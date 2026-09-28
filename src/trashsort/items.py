@@ -1,5 +1,5 @@
-# the knowledge base: known household items -> german bin.
-# "en" is the phrase clip scores against, "de" is shown to the user.
+# known household items
+# "en" is the phrase clip scores against, "de" is shown to the user
 
 ITEMS = [
     # --- gelbe tonne (plastic / metal / composite packaging) ---

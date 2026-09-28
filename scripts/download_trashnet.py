@@ -12,25 +12,27 @@ def main():
     zip_path = hf_hub_download(repo_id="garythung/trashnet", filename="dataset-resized.zip", repo_type="dataset")
 
     os.makedirs(config.TRASHNET_DIR, exist_ok=True)
-    counts = {c: 0 for c in config.CLASSES}
-    with zipfile.ZipFile(zip_path) as z:
-        for name in z.namelist():
+    # unpack only the material folders used by this project
+    counts = {class_name: 0 for class_name in config.CLASSES}
+    with zipfile.ZipFile(zip_path) as archive:
+        for name in archive.namelist():
             base = os.path.basename(name)
             if base.startswith(".") or not base.lower().endswith(".jpg"):
                 continue
-            cls = name.split("/")[-2]
-            if cls not in config.CLASSES:
+            class_name = name.split("/")[-2]
+            if class_name not in config.CLASSES:
                 continue
-            folder = os.path.join(config.TRASHNET_DIR, cls)
+
+            folder = os.path.join(config.TRASHNET_DIR, class_name)
             os.makedirs(folder, exist_ok=True)
-            out = os.path.join(folder, os.path.basename(name))
-            with z.open(name) as src, open(out, "wb") as dst:
-                dst.write(src.read())
-            counts[cls] += 1
+            output_path = os.path.join(folder, os.path.basename(name))
+            with archive.open(name) as source_file:
+                with open(output_path, "wb") as output_file:
+                    output_file.write(source_file.read())
+            counts[class_name] += 1
 
     print(counts)
     print("done ->", config.TRASHNET_DIR)
-
 
 if __name__ == "__main__":
     main()

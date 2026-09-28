@@ -43,8 +43,8 @@ BINS = {
 
 BIN_NAME_TO_KEY = {info["name"]: key for key, info in BINS.items()}
 
-# which bin each trashnet class belongs to
-CLASS_TO_BIN = {
+# map each material class to its usual bin
+MATERIAL_TO_BIN = {
     "cardboard": "papier",
     "paper": "papier",
     "glass": "altglas",
@@ -54,7 +54,7 @@ CLASS_TO_BIN = {
     "trash": "restmuell",
 }
 
-def get_bin(class_name):
-    # unknown stuff goes to restmuell
-    key = CLASS_TO_BIN.get(class_name.lower(), "restmuell")
+def get_bin_for_material(material):
+    # use restmuell when the model returns an unknown material
+    key = MATERIAL_TO_BIN.get(material.lower(), "restmuell")
     return BINS[key]

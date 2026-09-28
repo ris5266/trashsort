@@ -11,30 +11,42 @@ OUT = "data/trashnet/organic"
 PER_CLASS = 22
 MAXSIDE = 512
 
-
 def main():
-    ds = load_dataset("Nattakarn/fruit-and-vegetable-image-recognition", split="train")
-    names = ds.features["label"].names
+    dataset = load_dataset(
+        "Nattakarn/fruit-and-vegetable-image-recognition",
+        split="train",
+    )
+    class_names = dataset.features["label"].names
 
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)
     os.makedirs(OUT)
 
-    per = collections.Counter()
-    saved = 0
-    for i, ex in enumerate(ds):
-        cls = names[ex["label"]]
-        if per[cls] >= PER_CLASS:
+    # keep a small balanced sample from each food class
+    saved_per_class = collections.Counter()
+    saved_count = 0
+    for index, example in enumerate(dataset):
+        class_name = class_names[example["label"]]
+        if saved_per_class[class_name] >= PER_CLASS:
             continue
-        im = ex["image"].convert("RGB")
-        if max(im.size) > MAXSIDE:
-            s = MAXSIDE / max(im.size)
-            im = im.resize((int(im.size[0] * s), int(im.size[1] * s)))
-        im.save(os.path.join(OUT, "organic_%s_%04d.jpg" % (cls.replace(" ", "_"), i)))
-        per[cls] += 1
-        saved += 1
-    print("saved %d real organic images (<=%d per type) -> %s" % (saved, PER_CLASS, OUT))
 
+        image = example["image"].convert("RGB")
+        if max(image.size) > MAXSIDE:
+            scale = MAXSIDE / max(image.size)
+            image = image.resize(
+                (int(image.size[0] * scale), int(image.size[1] * scale))
+            )
+
+        safe_name = class_name.replace(" ", "_")
+        output_path = os.path.join(OUT, f"organic_{safe_name}_{index:04d}.jpg")
+        image.save(output_path)
+        saved_per_class[class_name] += 1
+        saved_count += 1
+
+    print(
+        "saved %d real organic images (<=%d per type) -> %s"
+        % (saved_count, PER_CLASS, OUT)
+    )
 
 if __name__ == "__main__":
     main()

@@ -1,80 +1,119 @@
 import cv2
 import gradio as gr
 
-from .infer import Classifier, analyze
+from .pipeline import MaterialClassifier, classify_image
 from .frame import ObjectFramer
 from .clip_recognizer import ClipRecognizer
 from .bins import BINS
 
-# load the models once
-CLF = Classifier()
-FRAMER = ObjectFramer()
-RECOG = ClipRecognizer()
+# load the models when the app starts
+MATERIAL_CLASSIFIER = MaterialClassifier()
+OBJECT_FRAMER = ObjectFramer()
+ITEM_RECOGNIZER = ClipRecognizer()
 
-def to_rgb(bgr):
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+def bgr_to_rgb(image):
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-# box around the object + tag
-def annotate(bgr, bbox, text, color):
-    out = bgr.copy()
-    h, w = out.shape[:2]
+# draw a box + label around the chosen object
+def annotate(image, bbox, text, color):
+    output = image.copy()
+    height, width = output.shape[:2]
 
-    (bw0, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1.0, 2)
-    fs = max(0.5, min((0.85 * w) / max(bw0, 1), 2.4))
-    tk = max(2, int(round(fs)))                 # text thickness
-    box_th = max(2, int(max(w, h) / 400))       # box thickness
-    (tw, tht), baseln = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, fs, tk)
-    pad = int(8 * fs)
-    th = tht + baseln + 2 * pad                 # tag height
-    margin = max(4, int(0.012 * h))
+    # shrink long labels until they fit inside the image
+    (base_text_width, _), _ = cv2.getTextSize(
+        text, cv2.FONT_HERSHEY_SIMPLEX, 1.0, 2
+    )
+    font_scale = max(0.5, min((0.85 * width) / max(base_text_width, 1), 2.4))
+    text_thickness = max(2, int(round(font_scale)))
+    box_thickness = max(2, int(max(width, height) / 400))
+    (text_width, text_height), baseline = cv2.getTextSize(
+        text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness
+    )
+    padding = int(8 * font_scale)
+    tag_height = text_height + baseline + 2 * padding
+    margin = max(4, int(0.012 * height))
+
     if bbox is not None:
-        x, y, bw, bh = bbox
-        cv2.rectangle(out, (x, y), (x + bw, y + bh), color, box_th)
+        x, y, box_width, box_height = bbox
+        cv2.rectangle(
+            output,
+            (x, y),
+            (x + box_width, y + box_height),
+            color,
+            box_thickness,
+        )
     else:
-        x, y = margin, th + margin
+        x, y = margin, tag_height + margin
 
-    top = y - th - margin
+    # place the label above the object, or below it when space is tight
+    top = y - tag_height - margin
     if top < margin:
         top = y + margin
-    top = max(margin, min(top, h - th - margin))
-    tx = max(margin, min(x, w - tw - 2 * pad))
-    cv2.rectangle(out, (tx, top), (tx + tw + 2 * pad, top + th), color, -1)
-    cv2.putText(out, text, (tx + pad, top + pad + tht), cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 0, 0), tk)
-    return out
+    top = max(margin, min(top, height - tag_height - margin))
+    left = max(margin, min(x, width - text_width - 2 * padding))
+    cv2.rectangle(
+        output,
+        (left, top),
+        (left + text_width + 2 * padding, top + tag_height),
+        color,
+        -1,
+    )
+    cv2.putText(
+        output,
+        text,
+        (left + padding, top + padding + text_height),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        font_scale,
+        (0, 0, 0),
+        text_thickness,
+    )
+    return output
 
-# run the pipeline and build the answer text
-def sort(image, point=None, mode="full"):
+# run the pipeline
+def sort_image(image, selected_point=None, mode="full"):
     if image is None:
         return None, "Please upload an image first."
 
-    bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    recog = RECOG if mode == "full" else None
-    res = analyze(CLF, bgr, FRAMER, recog, point=point)
-    info = res["bin"]
-    annotated = annotate(bgr, res["bbox"], "%s -> %s" % (res["item"], info["name"]), info["color"])
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    recognizer = ITEM_RECOGNIZER if mode == "full" else None
+    result = classify_image(
+        MATERIAL_CLASSIFIER,
+        image_bgr,
+        OBJECT_FRAMER,
+        recognizer,
+        point=selected_point,
+    )
+    bin_info = result["bin"]
+    label = f'{result["item"]} -> {bin_info["name"]}'
+    annotated = annotate(
+        image_bgr,
+        result["bbox"],
+        label,
+        bin_info["color"],
+    )
 
-    parts = ["## → %s  (%.0f%%)\n\n**Erkannt:** %s  \n**Gesetz:** %s" % (
-        info["name"], res["conf"] * 100, res["item"], info["law"])]
-    if not res["sure"] and res["alts"]:
-        lines = "\n".join("- %s → %s (%.0f%%)" % (de, BINS[k]["name"], p * 100)
-                          for de, k, p in res["alts"])
-        parts.append("\n\n_Unsicher – meintest du:_\n" + lines)
-    if res["n_objects"] > 1:
-        if point is not None:
-            parts.append("\n\n_%d Objekte gefunden, angeklicktes klassifiziert._" % res["n_objects"])
+    confidence = result["conf"] * 100
+    parts = [f'## → {bin_info["name"]}  ({confidence:.0f}%)\n\n**Erkannt:** {result["item"]}  \n**Gesetz:** {bin_info["law"]}']
+    if not result["sure"] and result["alts"]:
+        alternatives = "\n".join(f'- {item} → {BINS[bin_key]["name"]} ({score * 100:.0f}%)' for item, bin_key, score in result["alts"])
+        parts.append("\n\n_Unsicher – meintest du:_\n" + alternatives)
+
+    if result["n_objects"] > 1:
+        if selected_point is not None:
+            parts.append(f'\n\n_{result["n_objects"]} Objekte gefunden, angeklicktes klassifiziert._')
         else:
-            parts.append("\n\n_%d Objekte gefunden, größtes klassifiziert. "
-                         "Klicke ein Objekt im Bild an, um es auszuwählen._" % res["n_objects"])
-    return to_rgb(annotated), "".join(parts)
+            parts.append(f'\n\n_{result["n_objects"]} Objekte gefunden, größtes klassifiziert. Klicke ein Objekt im Bild an, um es auszuwählen._')
 
-def sort_at(image, mode, evt: gr.SelectData):
-    point = (evt.index[0], evt.index[1])
-    out_img, out_md = sort(image, point, mode)
-    return point, out_img, out_md
+    return bgr_to_rgb(annotated), "".join(parts)
 
-def sort_fresh(image, mode):
-    out_img, out_md = sort(image, None, mode)
-    return None, out_img, out_md
+def sort_selected_object(image, mode, event: gr.SelectData):
+    selected_point = (event.index[0], event.index[1])
+    output_image, output_text = sort_image(image, selected_point, mode)
+    return selected_point, output_image, output_text
+
+def sort_uploaded_image(image, mode):
+    output_image, output_text = sort_image(image, None, mode)
+    return None, output_image, output_text
 
 CSS = """
 #img_in, #out_img { height: 460px !important; }
@@ -82,11 +121,10 @@ CSS = """
 #sort_btn { height: 48px !important; flex-grow: 0 !important; }
 """
 
-def build():
+def build_app():
     with gr.Blocks(title="trashsort") as demo:
         gr.HTML("<style>%s</style>" % CSS)
-        gr.Markdown("# 🗑️ trashsort\n"
-                    "Upload an image of an item. The object is cut out, recognized and assigned to the correct German bin.")
+        gr.Markdown("# 🗑️ trashsort\nUpload an image of an item. The object is cut out, recognized and assigned to the correct German bin.")
         point = gr.State(None)
         modes = [
             ("Object & material recognition", "full"),
@@ -101,16 +139,16 @@ def build():
                 out_img = gr.Image(label="Recognition", type="numpy", format="png", height=460, elem_id="out_img")
                 out_md = gr.Markdown()
 
-        btn.click(sort, [img_in, point, mode], [out_img, out_md])
-        img_in.select(sort_at, [img_in, mode], [point, out_img, out_md])
-        img_in.upload(sort_fresh, [img_in, mode], [point, out_img, out_md])
+        btn.click(sort_image, [img_in, point, mode], [out_img, out_md])
+        img_in.select(sort_selected_object, [img_in, mode], [point, out_img, out_md])
+        img_in.upload(sort_uploaded_image, [img_in, mode], [point, out_img, out_md])
         img_in.clear(lambda: (None, None, ""), None, [point, out_img, out_md])
-        mode.change(sort, [img_in, point, mode], [out_img, out_md])
+        mode.change(sort_image, [img_in, point, mode], [out_img, out_md])
     return demo
 
 
 def main():
-    build().launch()
+    build_app().launch()
 
 
 if __name__ == "__main__":

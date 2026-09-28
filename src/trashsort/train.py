@@ -13,52 +13,71 @@ from .augmentation import train_transform, eval_transform
 from .dataset import TrashDataset, make_splits, class_weights, worker_init
 from .model import build_model, freeze_backbone
 
-
-def evaluate(model, loader, criterion):
+def evaluate_model(model, loader, loss_function):
     model.eval()
-    total = correct = 0
-    loss_sum = 0.0
-    with torch.no_grad():
-        for imgs, labels in loader:
-            imgs, labels = imgs.to(config.DEVICE), labels.to(config.DEVICE)
-            out = model(imgs)
-            loss = criterion(out, labels)
-            loss_sum += loss.item() * labels.size(0)
-            correct += (out.argmax(1) == labels).sum().item()
-            total += labels.size(0)
-    return loss_sum / total, correct / total
+    sample_count = 0
+    correct_count = 0
+    total_loss = 0.0
 
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(config.DEVICE)
+            labels = labels.to(config.DEVICE)
+            predictions = model(images)
+            loss = loss_function(predictions, labels)
+            total_loss += loss.item() * labels.size(0)
+            correct_count += (predictions.argmax(1) == labels).sum().item()
+            sample_count += labels.size(0)
+
+    return total_loss / sample_count, correct_count / sample_count
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--epochs", type=int, default=config.EPOCHS)
-    ap.add_argument("--batch-size", type=int, default=config.BATCH_SIZE)
-    ap.add_argument("--lr", type=float, default=config.LR)
-    ap.add_argument("--no-lighting-norm", action="store_true")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=config.EPOCHS)
+    parser.add_argument("--batch-size", type=int, default=config.BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=config.LR)
+    parser.add_argument("--no-lighting-norm", action="store_true")
+    args = parser.parse_args()
 
     use_norm = not args.no_lighting_norm
     torch.manual_seed(config.SEED)
     np.random.seed(config.SEED)
     print("device:", config.DEVICE)
 
-    # data
-    train_s, val_s, test_s = make_splits(config.TRASHNET_DIR)
-    if len(train_s) == 0:
+    # prepare reproducible training, validation, and test groups
+    train_samples, validation_samples, test_samples = make_splits(config.TRASHNET_DIR)
+    if not train_samples:
         print("no images found, run scripts/download_trashnet.py first")
         return
-    print("train", len(train_s), "val", len(val_s), "test", len(test_s))
+    print("train", len(train_samples), "val", len(validation_samples), "test", len(test_samples))
 
-    train_ds = TrashDataset(train_s, train_transform(), use_norm)
-    val_ds = TrashDataset(val_s, eval_transform(), use_norm)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=config.NUM_WORKERS, pin_memory=True, drop_last=True, worker_init_fn=worker_init)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=config.NUM_WORKERS, pin_memory=True, worker_init_fn=worker_init)
+    train_dataset = TrashDataset(train_samples, train_transform(), use_norm)
+    validation_dataset = TrashDataset(validation_samples, eval_transform(), use_norm)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=True,
+        drop_last=True,
+        worker_init_fn=worker_init,
+    )
+    validation_loader = DataLoader(
+        validation_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=True,
+        worker_init_fn=worker_init,
+    )
 
-    # model
+    # use class weights so small classes still matter during training
     model = build_model(len(config.CLASSES)).to(config.DEVICE)
-
-    weights = torch.tensor(class_weights(train_s)).to(config.DEVICE)
-    criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=0.05)
+    weights = torch.tensor(class_weights(train_samples)).to(config.DEVICE)
+    loss_function = nn.CrossEntropyLoss(
+        weight=weights,
+        label_smoothing=0.05,
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=config.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
     scaler = torch.amp.GradScaler("cuda", enabled=config.DEVICE.type == "cuda")
@@ -66,51 +85,61 @@ def main():
     os.makedirs(config.CHECKPOINT_DIR, exist_ok=True)
     ckpt_path = os.path.join(config.CHECKPOINT_DIR, "model.pt")
     best_acc = 0.0
-    frozen = None
+    backbone_is_frozen = None
 
     for epoch in range(1, args.epochs + 1):
-        want_frozen = epoch <= config.FREEZE_EPOCHS
-        if want_frozen != frozen:
-            freeze_backbone(model, want_frozen)
-            frozen = want_frozen
-            print("backbone frozen:", frozen)
+        should_freeze_backbone = epoch <= config.FREEZE_EPOCHS
+        if should_freeze_backbone != backbone_is_frozen:
+            freeze_backbone(model, should_freeze_backbone)
+            backbone_is_frozen = should_freeze_backbone
+            print("backbone frozen:", backbone_is_frozen)
 
         model.train()
-        seen = hits = 0
-        running = 0.0
-        for imgs, labels in tqdm(train_loader, desc="epoch %d" % epoch, leave=False):
-            imgs, labels = imgs.to(config.DEVICE), labels.to(config.DEVICE)
+        seen_count = 0
+        correct_count = 0
+        for images, labels in tqdm(
+            train_loader,
+            desc=f"epoch {epoch}",
+            leave=False,
+        ):
+            images = images.to(config.DEVICE)
+            labels = labels.to(config.DEVICE)
             optimizer.zero_grad()
 
             with torch.amp.autocast("cuda", enabled=config.DEVICE.type == "cuda"):
-                out = model(imgs)
-                loss = criterion(out, labels)
+                predictions = model(images)
+                loss = loss_function(predictions, labels)
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
 
-            running += loss.item() * labels.size(0)
-            hits += (out.argmax(1) == labels).sum().item()
-            seen += labels.size(0)
+            correct_count += (predictions.argmax(1) == labels).sum().item()
+            seen_count += labels.size(0)
 
         scheduler.step()
-        _, val_acc = evaluate(model, val_loader, criterion)
-        print("epoch %d train_acc %.3f val_acc %.3f" % (epoch, hits / seen, val_acc))
+        _, validation_accuracy = evaluate_model(
+            model,
+            validation_loader,
+            loss_function,
+        )
+        training_accuracy = correct_count / seen_count
+        print(f"epoch {epoch} train_acc {training_accuracy:.3f} val_acc {validation_accuracy:.3f}")
 
-        # save the best model
-        if val_acc > best_acc:
-            best_acc = val_acc
+        # keep only the checkpoint with the best validation score
+        if validation_accuracy > best_acc:
+            best_acc = validation_accuracy
             torch.save({
                 "model_state": model.state_dict(),
                 "classes": config.CLASSES,
                 "img_size": config.IMG_SIZE,
                 "use_lighting_norm": use_norm,
-                "val_acc": val_acc,
+                "val_acc": validation_accuracy,
             }, ckpt_path)
-            print("saved best", round(val_acc, 3))
+            print("saved best", round(validation_accuracy, 3))
 
-    with open(os.path.join(config.CHECKPOINT_DIR, "test_split.json"), "w") as f:
-        json.dump(test_s, f)
+    split_path = os.path.join(config.CHECKPOINT_DIR, "test_split.json")
+    with open(split_path, "w") as split_file:
+        json.dump(test_samples, split_file)
     print("best val_acc", round(best_acc, 3))
 
 

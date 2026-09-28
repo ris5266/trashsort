@@ -31,7 +31,7 @@ FREEZE_EPOCHS = 3
 # clip recognizer
 CLIP_ARCH = "ViT-L-14"
 CLIP_PRETRAINED = "openai"
-CLIP_THRESH = 0.28   # top prob must beat this or we say unsure (tuned on data/eval)
-CLIP_MARGIN = 0.07   # top1 must beat top2 by this much (tuned on data/eval)
+CLIP_THRESH = 0.28
+CLIP_MARGIN = 0.07
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

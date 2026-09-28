@@ -12,45 +12,43 @@ EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 
 cv2.setNumThreads(0)
 
-
 def worker_init(_):
     cv2.setNumThreads(0)
 
-
 def list_images(root):
-    # go through every class folder and collect
+    # collect each image with the number of its material class
     samples = []
-    for label, cls in enumerate(config.CLASSES):
-        folder = os.path.join(root, cls)
+    for label, class_name in enumerate(config.CLASSES):
+        folder = os.path.join(root, class_name)
         if not os.path.isdir(folder):
             continue
-        for f in sorted(os.listdir(folder)):
-            if f.startswith(".") or not f.lower().endswith(EXTS):
+        for filename in sorted(os.listdir(folder)):
+            if filename.startswith(".") or not filename.lower().endswith(EXTS):
                 continue
-            samples.append((os.path.join(folder, f), label))
+            samples.append((os.path.join(folder, filename), label))
     return samples
 
 
 def make_splits(root):
-    # split each class separately
-    rng = random.Random(config.SEED)
+    # split every class separately to keep the class balance
+    randomizer = random.Random(config.SEED)
     by_class = {i: [] for i in range(len(config.CLASSES))}
     for path, label in list_images(root):
         by_class[label].append(path)
 
     train, val, test = [], [], []
     for label, paths in by_class.items():
-        rng.shuffle(paths)
-        n = len(paths)
-        n_test = int(round(n * config.TEST_SPLIT))
-        n_val = int(round(n * config.VAL_SPLIT))
+        randomizer.shuffle(paths)
+        count = len(paths)
+        n_test = int(round(count * config.TEST_SPLIT))
+        n_val = int(round(count * config.VAL_SPLIT))
         test += [(p, label) for p in paths[:n_test]]
         val += [(p, label) for p in paths[n_test:n_test + n_val]]
         train += [(p, label) for p in paths[n_test + n_val:]]
 
-    rng.shuffle(train)
-    rng.shuffle(val)
-    rng.shuffle(test)
+    randomizer.shuffle(train)
+    randomizer.shuffle(val)
+    randomizer.shuffle(test)
     return train, val, test
 
 
@@ -63,20 +61,23 @@ class TrashDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def __getitem__(self, i):
-        path, label = self.samples[i]
-        img = cv2.imread(path)  # bgr
-        if img is None:
+    def __getitem__(self, index):
+        path, label = self.samples[index]
+        image = cv2.imread(path)
+        if image is None:
             raise ValueError("could not read image: " + path)
         if self.use_lighting_norm:
-            img = normalize_lighting(img)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = self.transform(image=img)["image"]
-        return img, label
+            image = normalize_lighting(image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = self.transform(image=image)["image"]
+        return image, label
 
 
 def class_weights(samples):
-    n = len(config.CLASSES)
-    counts = np.bincount([lbl for _, lbl in samples], minlength=n)
+    class_count = len(config.CLASSES)
+    counts = np.bincount(
+        [label for _, label in samples],
+        minlength=class_count,
+    )
     counts = np.clip(counts, 1, None)
-    return (counts.sum() / (n * counts)).astype(np.float32)
+    return (counts.sum() / (class_count * counts)).astype(np.float32)
