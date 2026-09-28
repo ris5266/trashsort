@@ -40,7 +40,6 @@ Upload a photo and trashsort runs it through a three stage pipeline:
 | `altglas`       | Glascontainer       | glass bottles and jars                |
 | `biomuell`      | Braune Tonne        | food and organic waste                |
 | `restmuell`     | Schwarze Tonne      | residual waste                        |
-| `pfand`         | Pfandrückgabe       | deposit bottles and cans              |
 | `sondermuell`   | Schadstoffsammlung  | batteries, chemicals, paint, oil      |
 | `elektroschrott`| Elektroschrott      | electronic waste                      |
 | `altkleider`    | Altkleidercontainer | wearable clothes and shoes            |

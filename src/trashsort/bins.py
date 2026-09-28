@@ -24,11 +24,6 @@ BINS = {
         "color": (120, 180, 120),
         "law": "VerpackG",
     },
-    "pfand": {
-        "name": "Pfand",
-        "color": (0, 215, 255),
-        "law": "VerpackG",
-    },
     "sondermuell": {
         "name": "Sondermuell",
         "color": (0, 0, 220),
