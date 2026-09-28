@@ -2,7 +2,7 @@
 
   <img src="icon.png" alt="logo" width="400px" height="400px"/>
 
-# trashsort
+# Trashsort
 </div>
 
 ### A smart trash sorter that recognizes items and tells you which German recycling bin they belong in. Built with Python, [PyTorch](https://github.com/pytorch/pytorch), [Gradio](https://github.com/gradio-app/gradio), [Ultralytics FastSAM](https://github.com/ultralytics/ultralytics), [OpenCLIP](https://github.com/mlfoundations/open_clip) and a self trained [EfficientNet-B0](https://github.com/garythung/trashnet) as a fallback
@@ -21,7 +21,7 @@
 
 ## How it works
 
-Upload a photo and trashsort runs it through a three stage pipeline:
+Upload a photo and Trashsort runs it through a three stage pipeline:
 
   ![Pipeline Process](pipeline.png)
 
